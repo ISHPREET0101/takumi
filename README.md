@@ -62,7 +62,7 @@ A 5-minute demonstration holds dozens of decisions like these. Video preserves t
 | **Extract** | A provider adapter turns the transcript into a structured lesson: steps with *instructions, rationale, success cues, common mistakes, recovery guidance* — each **evidence-linked to a verbatim transcript segment** — plus follow-up questions wherever reasoning is implied but unstated. |
 | **Review** | The expert edits transcript and lesson, manages evidence, answers or explicitly dismisses every flagged question, and sees live validity indicators. **Invalid evidence references are rejected server-side.** |
 | **Approve** | Approval requires: every step ≥1 valid evidence reference, every question resolved. Approved versions are immutable — edits create a new draft version; old attempts stay tied to the version they used. |
-| **Practice** | Trainees see **approved lessons only** (server-enforced). A canvas oscilloscope simulator (VOLTS/DIV, TIME/DIV, trigger enable/edge/level with realistic drift-and-lock behaviour) scores their decisions; feedback quotes the expert's rationale, mistakes and recovery moves. |
+| **Practice** | Trainees see **approved lessons only** (server-enforced). Steps carrying a simulator task run on the canvas oscilloscope (VOLTS/DIV, TIME/DIV, trigger enable/edge/level with realistic drift-and-lock behaviour) and are scored; steps without one present as guided read-and-continue with the expert's evidence attached. Feedback always quotes the expert's own rationale, mistakes and recovery moves. |
 | **Measure** | Attempts are recomputed server-side (clients can't fake scores) and stored against the exact approved lesson version — a record of who learned what, from which generation of the lesson. |
 
 **Provenance is always visible.** Every lesson carries a badge: **Hosted AI** (NVIDIA NIM) · **Local AI** (Ollama) · **Saved demonstration** (offline bundled sample) — plus provider/model and a cached flag. You always know how a lesson was produced.
@@ -79,6 +79,7 @@ A 5-minute demonstration holds dozens of decisions like these. Video preserves t
 - 🔁 **Versioned lessons:** approved → edit → new draft version; attempt history stays pinned to the version each trainee actually saw.
 - 📴 **One-command offline demo:** the backend serves the built frontend — `python run.py` is the whole show, no internet needed.
 - 🧪 **16 automated end-to-end checks** covering approval gating, trainee visibility, evidence rejection, scoring integrity, restart persistence, and provider-failure paths (see [Verification](#verification)).
+- ✅ **Live-verified both ways**: real video → local whisper → NVIDIA reasoning-model extraction → evidence-linked draft lesson; and the zero-network offline path.
 
 ---
 
@@ -164,7 +165,7 @@ Copy `backend/.env.example` → `backend/.env` (git-ignored, backend-only). Ever
 | `TAKUMI_EXTRACTION_PROVIDER` | `saved_demo` | `auto` \| `nvidia` \| `ollama` \| `saved_demo` |
 | `TAKUMI_NVIDIA_API_KEY` | — | NVIDIA NIM key (backend-only) |
 | `TAKUMI_NVIDIA_ENABLED` | `false` | **Second gate** — set `true` only after confirming your free entitlement |
-| `TAKUMI_NVIDIA_MODEL` | `meta/llama-3.1-8b-instruct` | NIM model id |
+| `TAKUMI_NVIDIA_MODEL` | `meta/llama-3.1-8b-instruct` | NIM model id — live-verified with `nvidia/nemotron-3-nano-omni-30b-a3b-reasoning` (reasoning models: see `TAKUMI_LLM_*` rows) |
 | `TAKUMI_NVIDIA_BASE_URL` | `https://integrate.api.nvidia.com/v1` | OpenAI-compatible endpoint |
 | `TAKUMI_OLLAMA_BASE_URL` | `http://localhost:11434` | Local Ollama |
 | `TAKUMI_OLLAMA_MODEL` | `qwen2.5:7b` | Local model |
@@ -237,7 +238,7 @@ Base URL `http://127.0.0.1:8000/api` — interactive docs at `/docs` (Swagger).
 
 ## Roadmap
 
-- [ ] Real consented expert recording to replace the synthetic sample
+- [ ] Own consented expert recording for the competition demo (the current real video verified the pipeline but is a downloaded clip — record your own expert for originality and consent)
 - [x] NVIDIA NIM extraction live — verified end-to-end on a real video with `nvidia/nemotron-3-nano-omni-30b-a3b-reasoning` (65 transcript segments → 5-step evidence-linked draft lesson)
 - [ ] Ollama `qwen2.5:7b` processing-time benchmark
 - [ ] Effectiveness study vs. written instructions (time, mistakes, assistance — disclosed sample size)

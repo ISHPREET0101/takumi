@@ -31,8 +31,11 @@ export default function ProvenanceBadge({
 }) {
   if (!provenance) return null;
   const meta = LABELS[provenance] ?? LABELS.saved_demo;
+  // NVIDIA model ids already carry their org prefix ("nvidia/nemotron…") —
+  // don't repeat the provider name in front of it.
+  const modelDetail = model?.startsWith(`${provider}/`) ? model : [provider, model].filter(Boolean).join("/");
   const suffix = cached ? " (cached)" : "";
-  const detail = provider ? ` · ${provider}${model ? `/${model}` : ""}` : "";
+  const detail = modelDetail ? ` · ${modelDetail}` : "";
   return (
     <span className={`prov-badge ${meta.className}`} title={meta.title}>
       {meta.label}
