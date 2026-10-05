@@ -229,6 +229,19 @@ Base URL `http://127.0.0.1:8000/api` — interactive docs at `/docs` (Swagger).
 
 ---
 
+## Deployment (Vercel static demo)
+
+The frontend deploys to Vercel as a **self-contained static demo**: the bundled sample lesson ships inside the JS bundle and a fetch shim serves the API client entirely in-browser — Review → answer questions → Approve → Practice (with scored attempts) works for any visitor, with state persisted in their own localStorage.
+
+The real pipeline (recordings, whisper transcription, SQLite, NVIDIA/Ollama extraction) **cannot** run on serverless — it needs background jobs, a persistent disk and a 465 MB model — so it stays in the local desktop app; the demo's upload button explains this to visitors.
+
+**Deploy** (a `vercel.json` in `frontend/` already sets `VITE_DEMO_MODE=1`):
+
+- Dashboard: import `ISHPREET0101/takumi` on vercel.com, set **Root Directory** = `frontend`, deploy.
+- CLI: `cd frontend && npx vercel --prod`
+
+---
+
 ## Competition context — Thapar Japan Hackathon 2026
 
 - **Problem statement:** [JETRO-PS-03](https://hack.tslasconnect.com/problem-statements) — Preserving & Transferring Tacit Technical Expertise to Future Generations.

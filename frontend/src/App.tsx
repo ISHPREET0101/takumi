@@ -5,6 +5,7 @@ import CapturePage from "./pages/CapturePage";
 import ReviewPage from "./pages/ReviewPage";
 import PracticePage from "./pages/PracticePage";
 import ErrorBoundary from "./components/ErrorBoundary";
+import { isDemoMode } from "./demo/demoShim";
 
 type Page = "capture" | "review" | "practice";
 
@@ -66,6 +67,13 @@ export default function App() {
           <span className="health-text">{providerLine}</span>
         </div>
       </header>
+
+      {isDemoMode && (
+        <div className="banner info" style={{ marginTop: 0 }}>
+          <strong>Static demo</strong> — bundled sample lesson; your changes are stored in this browser. Capture and
+          AI processing run in the local desktop app.
+        </div>
+      )}
 
       <main>
         <ErrorBoundary>
