@@ -21,7 +21,7 @@
 
 Built for **JETRO-PS-03 — "Preserving & Transferring Tacit Technical Expertise to Future Generations"**, Thapar Japan Hackathon 2026 (*Bridging Tradition and Innovation*).
 
-- **Capture** a ≤5-minute demonstration video
+- **Capture** a ≤10-minute demonstration video
 - **Extract** structured lesson steps linked to verbatim transcript evidence
 - **Review** as the expert: correct, answer flagged gaps, approve
 - **Practice** as a trainee on an oscilloscope simulator that quotes the expert's own reasoning
@@ -51,14 +51,14 @@ A 5-minute demonstration holds dozens of decisions like these. Video preserves t
  │ CAPTURE  │ ▸ │  EXTRACT   │ ▸ │   REVIEW & APPROVE  │ ▸ │ PRACTICE │ ▸ │  MEASURE │
  └──────────┘   └────────────┘   └─────────────────────┘   └──────────┘   └──────────┘
  video/audio     transcribe +      expert corrects the      oscilloscope     attempts scored
- ≤ 5 min,        AI drafts a       transcript & draft,      simulator;       server-side and
+ ≤ 10 min,       AI drafts a       transcript & draft,      simulator;       server-side and
  stored          structured        answers flagged          feedback quotes  tied to the
  locally         lesson draft      knowledge gaps           the expert       approved version
 ```
 
 | Stage | What actually happens |
 |---|---|
-| **Capture** | Upload a video/audio demonstration (≤5 min, ≤300 MB). The file never leaves the machine. A background job pipeline transcribes locally with **faster-whisper** (`small.en`, CPU INT8, timestamped segments), with live progress and loud failure states. |
+| **Capture** | Upload a video/audio demonstration (≤10 min, ≤1 GB). The file never leaves the machine. A background job pipeline transcribes locally with **faster-whisper** (`small.en`, CPU INT8, timestamped segments), with live progress and loud failure states. |
 | **Extract** | A provider adapter turns the transcript into a structured lesson: steps with *instructions, rationale, success cues, common mistakes, recovery guidance* — each **evidence-linked to a verbatim transcript segment** — plus follow-up questions wherever reasoning is implied but unstated. |
 | **Review** | The expert edits transcript and lesson, manages evidence, answers or explicitly dismisses every flagged question, and sees live validity indicators. **Invalid evidence references are rejected server-side.** |
 | **Approve** | Approval requires: every step ≥1 valid evidence reference, every question resolved. Approved versions are immutable — edits create a new draft version; old attempts stay tied to the version they used. |
@@ -169,8 +169,8 @@ Copy `backend/.env.example` → `backend/.env` (git-ignored, backend-only). Ever
 | `TAKUMI_OLLAMA_BASE_URL` | `http://localhost:11434` | Local Ollama |
 | `TAKUMI_OLLAMA_MODEL` | `qwen2.5:7b` | Local model |
 | `TAKUMI_WHISPER_MODEL` | `small.en` | faster-whisper model |
-| `TAKUMI_MAX_RECORDING_SECONDS` | `300` | Upload duration limit |
-| `TAKUMI_MAX_UPLOAD_MB` | `300` | Upload size limit |
+| `TAKUMI_MAX_RECORDING_SECONDS` | `600` | Upload duration limit (10 min) |
+| `TAKUMI_MAX_UPLOAD_MB` | `1000` | Upload size limit (1 GB) |
 | `TAKUMI_LLM_TIMEOUT_SECONDS` | `60` | Per-request LLM timeout |
 | `TAKUMI_LLM_MAX_ATTEMPTS` | `2` | Bounded retries (no runaway calls) |
 

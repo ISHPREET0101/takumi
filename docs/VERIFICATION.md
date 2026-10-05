@@ -37,6 +37,12 @@ Date: 2026-10-05 (optimized build) · Environment: Windows 11, Python 3.13.1, No
 | DB hot paths | full scans | indexed | `jobs(recording_id)`, `lessons(recording_id)`, `lesson_versions(lesson_id)`, `attempts(lesson_id)` |
 | Video seeking in Review | — | verified 206 + `Content-Range` | Starlette FileResponse range support (test #17) |
 
+## Recording limits raised to 10 min / 1 GB (2026-10-05)
+
+- `TAKUMI_MAX_RECORDING_SECONDS` default **300 → 600**, `TAKUMI_MAX_UPLOAD_MB` **300 → 1 GB** (a real 10-minute 1080p video needs more than 300 MB). Updated everywhere: config, `.env.example`, Capture-page wording, README, pitch deck (regenerated pptx + pdf), and the oversized-rejection test (700 s probe vs 600 s limit).
+- **Live end-to-end proof (real video):** the user's actual 315 s (5:15) upload — previously rejected by the old 300 s limit — reprocessed successfully: passed the duration gate, decoded via PyAV, transcribed by real faster-whisper `small.en` into **65 speech segments**. It then stops at the extraction stage with clear guidance because no AI provider is configured yet (default is the offline `saved_demo` path; NVIDIA/Ollama remain gated by the plan's pending confirmations).
+- **Dependency bug found & fixed by the live test:** faster-whisper 1.2.1 passes `metadata_errors=` to `av.open()`, which PyAV 19 removed → real transcription crashed with `TypeError`. Pinned `av>=14,<19` in `requirements.txt` (verified on av 18.1.0) and added a friendly failure message for undecodable audio files (`transcription failed — audio could not be decoded (corrupt or unsupported file)`).
+
 ## Frontend robustness additions
 
 - React `ErrorBoundary` around all pages — a page crash shows a recoverable banner instead of a white screen.

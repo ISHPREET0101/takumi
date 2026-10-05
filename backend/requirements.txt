@@ -9,6 +9,8 @@ python-dotenv>=1.0
 # Local transcription (CPU INT8). If this fails to install on your Python,
 # the app still runs — the bundled sample needs no transcription.
 faster-whisper>=1.0
+# faster-whisper 1.2.x passes metadata_errors= to av.open(), removed in PyAV 19 — pin below it
+av>=14,<19
 
 # Testing
 pytest>=8.0

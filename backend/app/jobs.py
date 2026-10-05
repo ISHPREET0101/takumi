@@ -202,7 +202,12 @@ def _process(c, job_id: str, rec: dict) -> None:
         def on_progress(frac: float) -> None:
             set_progress(c, job_id, "transcribing", 8.0 + frac * 32.0)
 
-        segments, whisper_dur = tr.transcribe(path, on_progress=on_progress)
+        try:
+            segments, whisper_dur = tr.transcribe(path, on_progress=on_progress)
+        except Exception as exc:
+            fail(c, job_id, f"transcription failed — audio could not be decoded "
+                            f"(corrupt or unsupported file): {exc}")
+            return
         if whisper_dur > config.MAX_RECORDING_SECONDS:
             fail(c, job_id, f"recording is {whisper_dur:.0f}s; limit is {config.MAX_RECORDING_SECONDS:.0f}s")
             return

@@ -411,10 +411,10 @@ def test_media_range_request_supported(client):
 
 
 def test_oversized_recording_fails_fast_before_transcription(client, monkeypatch):
-    """A >5 min recording must be rejected in the probe stage, without loading whisper."""
+    """A >10 min recording must be rejected in the probe stage, without loading whisper."""
     from app.services import transcription as tr_mod
 
-    monkeypatch.setattr(tr_mod, "media_duration", lambda path: 400.0)
+    monkeypatch.setattr(tr_mod, "media_duration", lambda path: 700.0)
 
     def _must_not_run(path, on_progress=None):
         raise AssertionError("transcription started despite oversized duration")
@@ -423,8 +423,8 @@ def test_oversized_recording_fails_fast_before_transcription(client, monkeypatch
 
     rec = _upload_wav(client)
     rec, job = _wait_job(client, rec["id"], expect="failed")
-    assert "400s" in job["error"]
-    assert "limit is 300s" in job["error"]
+    assert "700s" in job["error"]
+    assert "limit is 600s" in job["error"]
 
 
 def test_health_ollama_probe_is_cached(client, monkeypatch):

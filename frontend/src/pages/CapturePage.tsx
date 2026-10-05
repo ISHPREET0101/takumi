@@ -66,7 +66,7 @@ export default function CapturePage({ onOpenReview }: { onOpenReview: (lessonId:
       <section className="card">
         <h2>Capture an expert demonstration</h2>
         <p className="muted">
-          Upload an English demonstration video or audio of <strong>up to 5 minutes</strong>. Processing runs in the
+          Upload an English demonstration video or audio of <strong>up to 10 minutes</strong>. Processing runs in the
           background: local transcription, then AI extraction into a draft lesson for expert review. The recording
           itself never leaves this machine; only the transcript goes to the extraction provider.
         </p>
@@ -90,7 +90,7 @@ export default function CapturePage({ onOpenReview }: { onOpenReview: (lessonId:
           ) : (
             <>
               <strong>Drop a recording here</strong> or click to browse
-              <div className="muted small">mp4 · mov · webm · m4a · mp3 · wav — max 300 MB</div>
+              <div className="muted small">mp4 · mov · webm · m4a · mp3 · wav — max 1 GB</div>
             </>
           )}
         </div>

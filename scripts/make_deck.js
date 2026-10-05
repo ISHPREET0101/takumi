@@ -150,7 +150,7 @@ const card = (slide, x, y, w, h, fill = PANEL) => {
   });
 
   const steps = [
-    ["1", "CAPTURE", "≤5-min demo video; stays on-device"],
+    ["1", "CAPTURE", "≤10-min demo video; stays on-device"],
     ["2", "EXTRACT", "local transcription + AI draft with evidence links"],
     ["3", "REVIEW", "expert corrects, answers gaps, sees provenance"],
     ["4", "APPROVE", "only approved versions reach trainees"],
