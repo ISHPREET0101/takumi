@@ -1,0 +1,169 @@
+{
+  "demo_id": "oscilloscope-setup-v1",
+  "label": "Oscilloscope Setup & Signal Troubleshooting (synthetic sample)",
+  "synthetic": true,
+  "note": "Bundled saved demonstration used for the offline path. Transcript is synthetic; replace with a real consented expert recording for the competition demo.",
+  "duration_sec": 214.0,
+  "transcript": [
+    { "start": 0.0, "end": 11.2, "text": "Alright, let's get started. Today I want to show you how I set up the oscilloscope from scratch, and then how I debug a signal that looks unstable on the screen." },
+    { "start": 11.2, "end": 24.6, "text": "First rule before you touch any knob: connect the ground clip first. If you connect the probe tip before ground you can float the scope and damage the front end." },
+    { "start": 24.6, "end": 37.9, "text": "So, ground clip first, then the probe tip onto the test point. Take your time here, because a loose ground clip is the number one cause of ghost noise on the trace." },
+    { "start": 37.9, "end": 52.3, "text": "Now the vertical scale. I know this circuit runs about two volts peak to peak, so I set volts per division to five hundred millivolts." },
+    { "start": 52.3, "end": 69.8, "text": "Why five hundred? Because the screen is eight divisions tall. Two volts needs four divisions, and that leaves headroom for overshoot without clipping the trace." },
+    { "start": 69.8, "end": 86.1, "text": "If the trace disappears off the top of the screen, don't chase it with the position knob. Fix the volts per division first. That is the most common mistake I see beginners make." },
+    { "start": 86.1, "end": 98.4, "text": "Next, the timebase. Our test signal is one kilohertz, which means one full cycle every millisecond." },
+    { "start": 98.4, "end": 114.7, "text": "I set the time division to five hundred microseconds. That gives me exactly two full cycles across the ten horizontal divisions, enough to judge the period and the symmetry." },
+    { "start": 114.7, "end": 128.9, "text": "If the timebase is too fast you only see noise, and too slow the cycles squash together. Two cycles on screen is my rule of thumb." },
+    { "start": 128.9, "end": 143.2, "text": "Now the part everyone skips: triggering. Without a trigger the waveform free-runs and drifts sideways, so nothing you measure will ever repeat." },
+    { "start": 143.2, "end": 160.5, "text": "I enable edge trigger, rising edge, and set the trigger level to about four hundred millivolts, which sits roughly a third of the way up the rising slope." },
+    { "start": 160.5, "end": 177.8, "text": "The level must cross a clean part of the slope. If you park it on the noisy flat top of the waveform, the scope triggers on noise and the display jitters all day." },
+    { "start": 177.8, "end": 192.4, "text": "Okay, now watch what happens when something goes wrong. See the trace drifting? Someone knocked the trigger level off the slope, so the scope lost its lock." },
+    { "start": 192.4, "end": 207.6, "text": "My recovery is always the same three moves: enable the trigger, walk the level down until I see a clean rising crossing, then stop. The trace locks instantly." },
+    { "start": 207.6, "end": 214.0, "text": "And if the trace is still jumpy after that, I check the ground clip before blaming the probe. Nine times out of ten it is the ground. That is the whole routine." }
+  ],
+  "extraction": {
+    "title": "Oscilloscope Setup & Signal Troubleshooting",
+    "summary": "A five-step bench routine for bringing an oscilloscope up on a known 1 kHz, 2 Vpp test signal: ground the probe first, set 500 mV/div vertical, 500 µs/div timebase, lock a rising edge trigger at 400 mV, and recover a drifting trace by re-walking the trigger.",
+    "steps": [
+      {
+        "id": "s1",
+        "title": "Connect the ground clip before the probe tip",
+        "instructions": "Before touching any controls, attach the probe's ground clip to the circuit's ground reference, then place the probe tip on the test point. Confirm the ground clip seats firmly.",
+        "rationale": "Connecting the tip first can float the scope relative to the circuit and damage the front end; a loose ground is the top cause of ghost noise on the trace.",
+        "success_cues": [
+          "Ground clip seats firmly with no wiggle",
+          "Baseline trace shows no ghost noise with tip removed"
+        ],
+        "common_mistakes": [
+          "Connecting the probe tip before the ground clip",
+          "Leaving the ground clip loosely attached"
+        ],
+        "recovery": "If unexplained noise appears later, reseat the ground clip first and re-check before suspecting the probe.",
+        "evidence": [
+          { "seg": 1, "quote": "connect the ground clip first. If you connect the probe tip before ground you can float the scope and damage the front end" },
+          { "seg": 2, "quote": "a loose ground clip is the number one cause of ghost noise" }
+        ],
+        "simulator": { "task": "free", "note": "Physical bench action; no simulator task. Watch the explanation and continue." }
+      },
+      {
+        "id": "s2",
+        "title": "Set vertical scale to 500 mV/div",
+        "instructions": "Set VOLTS/DIV to 500 mV. The 2 Vpp test signal should occupy about four of the eight vertical divisions, centered on screen.",
+        "rationale": "Two volts needs four divisions at 500 mV/div, leaving headroom for overshoot without clipping; the screen is eight divisions tall.",
+        "success_cues": [
+          "Waveform peaks stay inside the graticule with visible headroom",
+          "Waveform occupies roughly half the screen height"
+        ],
+        "common_mistakes": [
+          "Chasing an off-screen trace with the position knob instead of fixing VOLTS/DIV"
+        ],
+        "recovery": "If the trace runs off the top or bottom, return to VOLTS/DIV and step until the full waveform fits.",
+        "evidence": [
+          { "seg": 3, "quote": "I set volts per division to five hundred millivolts" },
+          { "seg": 4, "quote": "Two volts needs four divisions, and that leaves headroom for overshoot without clipping" },
+          { "seg": 5, "quote": "don't chase it with the position knob. Fix the volts per division first" }
+        ],
+        "simulator": {
+          "task": "vertical",
+          "target_vdiv": 0.5,
+          "note": "Scope starts mis-set at 5 V/div (waveform nearly flat). Set 500 mV/div.",
+          "initial": { "vdiv": 5, "sdiv": 0.0005, "trigEnabled": true, "trigLevel": 0.4, "edge": "rise" }
+        }
+      },
+      {
+        "id": "s3",
+        "title": "Set timebase to 500 µs/div",
+        "instructions": "Set TIME/DIV to 500 µs so the 1 kHz signal shows exactly two full cycles across the ten horizontal divisions.",
+        "rationale": "One kilohertz means one cycle per millisecond; two cycles on screen is enough to judge period and symmetry without squashing or over-zooming.",
+        "success_cues": [
+          "Exactly two full cycles visible across the screen",
+          "Rising and falling slopes look symmetric"
+        ],
+        "common_mistakes": [
+          "Timebase too fast: only noise visible",
+          "Timebase too slow: cycles squash together"
+        ],
+        "recovery": "Count cycles on screen and adjust TIME/DIV until exactly two cycles fit.",
+        "evidence": [
+          { "seg": 6, "quote": "Our test signal is one kilohertz, which means one full cycle every millisecond" },
+          { "seg": 7, "quote": "I set the time division to five hundred microseconds" },
+          { "seg": 8, "quote": "Two cycles on screen is my rule of thumb" }
+        ],
+        "simulator": {
+          "task": "timebase",
+          "target_sdiv": 0.0005,
+          "note": "Scope starts at 100 µs/div (over-zoomed, one partial cycle). Set 500 µs/div.",
+          "initial": { "vdiv": 0.5, "sdiv": 0.0001, "trigEnabled": true, "trigLevel": 0.4, "edge": "rise" }
+        }
+      },
+      {
+        "id": "s4",
+        "title": "Enable rising-edge trigger at about 400 mV",
+        "instructions": "Enable edge trigger, select the rising edge, and set the trigger level to roughly 400 mV — about a third of the way up the rising slope.",
+        "rationale": "Without a trigger the waveform free-runs and nothing repeats. The level must cross a clean part of the slope; on the noisy flat top the scope triggers on noise and jitters.",
+        "success_cues": [
+          "Trace stops drifting and holds still",
+          "Trigger level line sits on the rising slope, not the flat top"
+        ],
+        "common_mistakes": [
+          "Leaving the trigger disabled and blaming the probe",
+          "Parking the level on the noisy flat top of the waveform"
+        ],
+        "recovery": "Walk the level down until it crosses a clean rising slope, then stop.",
+        "evidence": [
+          { "seg": 9, "quote": "Without a trigger the waveform free-runs and drifts sideways, so nothing you measure will ever repeat" },
+          { "seg": 10, "quote": "I enable edge trigger, rising edge, and set the trigger level to about four hundred millivolts" },
+          { "seg": 11, "quote": "If you park it on the noisy flat top of the waveform, the scope triggers on noise and the display jitters" }
+        ],
+        "simulator": {
+          "task": "trigger",
+          "target_level": 0.4,
+          "edge": "rise",
+          "note": "Trigger starts disabled and the trace free-runs. Enable rising-edge trigger at ~400 mV.",
+          "initial": { "vdiv": 0.5, "sdiv": 0.0005, "trigEnabled": false, "trigLevel": 0.4, "edge": "rise" }
+        }
+      },
+      {
+        "id": "s5",
+        "title": "Recover a drifting trace",
+        "instructions": "When the trace drifts: enable the trigger, walk the trigger level down until a clean rising crossing appears, then stop adjusting. If it is still jumpy, reseat the ground clip before blaming the probe.",
+        "rationale": "A knocked-off trigger level is the usual cause of a drifting trace; the same three recovery moves fix it every time, and the ground clip explains most remaining cases.",
+        "success_cues": [
+          "Trace locks and holds still after the level crosses a clean rising slope",
+          "No residual jitter after reseating ground"
+        ],
+        "common_mistakes": [
+          "Turning random knobs instead of following the three fixed recovery moves",
+          "Replacing the probe before checking the ground clip"
+        ],
+        "recovery": "Enable trigger -> walk level to a clean rising crossing -> stop; then check ground.",
+        "evidence": [
+          { "seg": 12, "quote": "Someone knocked the trigger level off the slope, so the scope lost its lock" },
+          { "seg": 13, "quote": "enable the trigger, walk the level down until I see a clean rising crossing, then stop" },
+          { "seg": 14, "quote": "I check the ground clip before blaming the probe" }
+        ],
+        "simulator": {
+          "task": "recovery",
+          "target_level": 0.4,
+          "edge": "rise",
+          "note": "A disturbance knocks the trigger out (disabled, level parked high). Restore the lock.",
+          "initial": { "vdiv": 0.5, "sdiv": 0.0005, "trigEnabled": false, "trigLevel": 0.95, "edge": "rise" }
+        }
+      }
+    ],
+    "questions": [
+      {
+        "question": "Why do you always use the rising edge rather than the falling edge for this signal?",
+        "why_missing": "The expert consistently selected the rising edge but never explained why it is preferred here."
+      },
+      {
+        "question": "What is your procedure when the signal amplitude is unknown before setting VOLTS/DIV?",
+        "why_missing": "The expert assumed the known 2 Vpp test signal; the unknown-amplitude case was never covered."
+      },
+      {
+        "question": "How do probe attenuation settings (1x/10x) change the vertical scale you choose?",
+        "why_missing": "The demonstration used one probe setting without discussing how attenuation affects the mV/div math."
+      }
+    ]
+  }
+}
