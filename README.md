@@ -171,8 +171,9 @@ Copy `backend/.env.example` → `backend/.env` (git-ignored, backend-only). Ever
 | `TAKUMI_WHISPER_MODEL` | `small.en` | faster-whisper model |
 | `TAKUMI_MAX_RECORDING_SECONDS` | `600` | Upload duration limit (10 min) |
 | `TAKUMI_MAX_UPLOAD_MB` | `1000` | Upload size limit (1 GB) |
-| `TAKUMI_LLM_TIMEOUT_SECONDS` | `60` | Per-request LLM timeout |
+| `TAKUMI_LLM_TIMEOUT_SECONDS` | `60` | Per-request LLM timeout — use ~240 for reasoning models |
 | `TAKUMI_LLM_MAX_ATTEMPTS` | `2` | Bounded retries (no runaway calls) |
+| `TAKUMI_LLM_MAX_TOKENS` | `3000` | Generation budget — use ~8000 for reasoning models (thinking tokens) |
 
 ### Extraction providers
 
@@ -237,7 +238,7 @@ Base URL `http://127.0.0.1:8000/api` — interactive docs at `/docs` (Swagger).
 ## Roadmap
 
 - [ ] Real consented expert recording to replace the synthetic sample
-- [ ] NVIDIA NIM extraction live (pending free-entitlement confirmation)
+- [x] NVIDIA NIM extraction live — verified end-to-end on a real video with `nvidia/nemotron-3-nano-omni-30b-a3b-reasoning` (65 transcript segments → 5-step evidence-linked draft lesson)
 - [ ] Ollama `qwen2.5:7b` processing-time benchmark
 - [ ] Effectiveness study vs. written instructions (time, mistakes, assistance — disclosed sample size)
 - [ ] Multi-lesson courses & trainee progress tracking

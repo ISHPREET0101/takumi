@@ -43,6 +43,15 @@ Date: 2026-10-05 (optimized build) · Environment: Windows 11, Python 3.13.1, No
 - **Live end-to-end proof (real video):** the user's actual 315 s (5:15) upload — previously rejected by the old 300 s limit — reprocessed successfully: passed the duration gate, decoded via PyAV, transcribed by real faster-whisper `small.en` into **65 speech segments**. It then stops at the extraction stage with clear guidance because no AI provider is configured yet (default is the offline `saved_demo` path; NVIDIA/Ollama remain gated by the plan's pending confirmations).
 - **Dependency bug found & fixed by the live test:** faster-whisper 1.2.1 passes `metadata_errors=` to `av.open()`, which PyAV 19 removed → real transcription crashed with `TypeError`. Pinned `av>=14,<19` in `requirements.txt` (verified on av 18.1.0) and added a friendly failure message for undecodable audio files (`transcription failed — audio could not be decoded (corrupt or unsupported file)`).
 
+## Live hosted-AI extraction (2026-10-05) — NVIDIA NIM ✅
+
+The pending "NVIDIA NIM live" item is now **done**, using the model chosen on build.nvidia.com:
+
+- **Model:** `nvidia/nemotron-3-nano-omni-30b-a3b-reasoning` (262K context, reasoning; free NIM credits confirmed by the working call).
+- **Result:** the real 315 s video (65 whisper-transcribed speech segments) extracted into a **5-step draft lesson with 4 flagged follow-up questions**, every step evidence-linked to verbatim transcript segments; provenance badge switched to **Hosted AI**.
+- **Reasoning-model tuning (in git-ignored `.env`):** `TAKUMI_LLM_MAX_TOKENS=8000` and `TAKUMI_LLM_TIMEOUT_SECONDS=240` — the reasoning pass needs more thinking tokens and wall time than the 60 s default (first attempt read-timed-out at 60 s, succeeded at 240 s).
+- **What the draft shows by design:** AI transcription of real speech contains mis-hearings (e.g. "bat-masked motion"), and the model flags implied-but-unstated reasoning as questions instead of inventing answers — both are resolved by the human expert in the Review stage, which is the product's core claim.
+
 ## Frontend robustness additions
 
 - React `ErrorBoundary` around all pages — a page crash shows a recoverable banner instead of a white screen.
