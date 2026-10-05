@@ -19,6 +19,9 @@
 
 **Takumi** (匠 — "artisan/master craftsman") turns a short expert demonstration video into a **verified, expert-approved, hands-on lesson** — so tacit knowledge survives the expert.
 
+> **Live static demo:** https://takumi-two-kohl.vercel.app · **Full app:** runs locally (`python run.py`)
+>
+
 Built for **JETRO-PS-03 — "Preserving & Transferring Tacit Technical Expertise to Future Generations"**, Thapar Japan Hackathon 2026 (*Bridging Tradition and Innovation*).
 
 - **Capture** a ≤10-minute demonstration video
@@ -235,6 +238,7 @@ The frontend deploys to Vercel as a **self-contained static demo**: the bundled 
 
 The real pipeline (recordings, whisper transcription, SQLite, NVIDIA/Ollama extraction) **cannot** run on serverless — it needs background jobs, a persistent disk and a 465 MB model — so it stays in the local desktop app; the demo's upload button explains this to visitors.
 
+**Live demo:** https://takumi-two-kohl.vercel.app  
 **Deploy** (a `vercel.json` in `frontend/` already sets `VITE_DEMO_MODE=1`):
 
 - Dashboard: import `ISHPREET0101/takumi` on vercel.com, set **Root Directory** = `frontend`, deploy.
