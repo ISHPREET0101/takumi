@@ -9,6 +9,8 @@ interplay with evidence matching.
 """
 import json
 import os
+import shutil
+import subprocess
 import sys
 import time
 import wave
@@ -458,6 +460,69 @@ def test_over_thirty_minutes_is_rejected(client, monkeypatch, probe_available):
     assert "1801s" in job["error"]
     assert "limit is 1800s" in job["error"]
     assert len(calls) == (0 if probe_available else 1)
+
+
+@pytest.mark.parametrize("seconds", [1800, 1801])
+def test_real_mp4_duration_boundary(client, monkeypatch, tmp_path, seconds):
+    """Exercise real MP4 upload/probing; only model calls are simulated."""
+    ffmpeg = shutil.which("ffmpeg")
+    if not ffmpeg or not shutil.which("ffprobe"):
+        pytest.skip("real MP4 boundary coverage requires ffmpeg and ffprobe")
+    from app.services import transcription as tr_mod
+    from app.services import extraction as ex_mod
+
+    video = tmp_path / f"boundary-{seconds}.mp4"
+    subprocess.run(
+        [ffmpeg, "-v", "error", "-f", "lavfi", "-i", "color=c=black:s=32x32:r=1",
+         "-f", "lavfi", "-i", "anullsrc=r=8000:cl=mono", "-t", str(seconds),
+         "-c:v", "mpeg4", "-c:a", "aac", "-b:a", "8k", "-y", str(video)],
+        check=True, capture_output=True, timeout=60,
+    )
+    subprocess.run(
+        [ffmpeg, "-v", "error", "-i", str(video), "-f", "null", "-"],
+        check=True, capture_output=True, timeout=60,
+    )
+    assert tr_mod.probe_duration_ffprobe(video) == pytest.approx(seconds, abs=0.01)
+    monkeypatch.setattr(tr_mod, "media_duration_fast", tr_mod.probe_duration_ffprobe)
+    monkeypatch.setattr("app.config.EXTRACTION_PROVIDER", "ollama")
+    monkeypatch.setattr(ex_mod, "ollama_reachable", lambda timeout=1.0, force=False: True)
+    monkeypatch.setattr(ex_mod, "extract_with_ollama", lambda segments: json.loads(json.dumps(FIXTURE["extraction"])))
+    calls = []
+
+    def transcribe(path, on_progress=None):
+        calls.append(path)
+        return _segments_from_fixture(), tr_mod.probe_duration_ffprobe(path)
+
+    monkeypatch.setattr(tr_mod, "transcribe", transcribe)
+    with video.open("rb") as source:
+        response = client.post("/api/recordings", files={"file": (video.name, source, "video/mp4")})
+    assert response.status_code == 200, response.text
+    rec, job = _wait_job(client, response.json()["id"], expect="succeeded" if seconds == 1800 else "failed")
+    if seconds == 1800:
+        assert rec["duration_sec"] == pytest.approx(1800)
+        assert rec["media_kind"] == "video"
+        assert job["lesson_id"]
+        assert len(calls) == 1
+    else:
+        assert "limit is 1800s" in job["error"]
+        assert not calls, "oversized MP4 must fail before loading transcription"
+
+
+@pytest.mark.parametrize("filename,content,status", [
+    ("bad.exe", b"not media", 415),
+    ("empty.mp4", b"", 422),
+    ("oversize.mp4", b"x" * (1024 * 1024 + 1), 413),
+], ids=["unsupported-extension", "empty-file", "size-limit"])
+def test_invalid_upload_does_not_leave_recording(client, monkeypatch, filename, content, status):
+    from app import config
+
+    monkeypatch.setattr(config, "MAX_UPLOAD_MB", 1)
+    before = client.get("/api/recordings").json()
+    files_before = set(config.RECORDINGS_DIR.iterdir())
+    response = client.post("/api/recordings", files={"file": (filename, content, "application/octet-stream")})
+    assert response.status_code == status, response.text
+    assert len(client.get("/api/recordings").json()) == len(before)
+    assert set(config.RECORDINGS_DIR.iterdir()) == files_before
 
 
 def test_health_ollama_probe_is_cached(client, monkeypatch):

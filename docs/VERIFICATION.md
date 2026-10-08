@@ -97,6 +97,14 @@ The pending "NVIDIA NIM live" item is now **done**, using the model chosen on bu
 - Regression coverage uploads an MP4 with stubbed metadata/transcription at exactly 1800 seconds and rejects 1801 seconds. Both the early probe and transcription-duration fallback paths are covered. These tests verify validation, not real 30-minute video decoding or model processing performance.
 - Existing installations with an explicit duration override should set it to `1800` and restart the backend. Vercel remains the sample-only frontend; actual uploads require the local backend and transcription dependencies.
 
+## Follow-up verification of 30-minute uploads (2026-10-08)
+
+- Backend: **24 passed, 0 failed, 0 skipped** with `backend/.venv/Scripts/python.exe -m pytest tests -q --junitxml=data/final-verification-results.xml`. One upstream Starlette/httpx deprecation warning remains.
+- New real-media coverage generates MP4 files with a small video track and silent audio at 1800 and 1801 seconds. FFmpeg decodes both completely; ffprobe confirms their durations. Both files are uploaded through the API: 1800 seconds proceeds to a draft lesson with simulated model calls; 1801 seconds fails before transcription. Invalid extension, empty-file, and size-limit rejection leave no database recording or orphaned file. The size test temporarily lowers the cap to 1 MB rather than allocating a 1 GB payload.
+- Both native API (`VITE_DEMO_MODE=0`) and Vercel sample (`VITE_DEMO_MODE=1`) production builds/typechecks passed. Playwright passed against an isolated real API at port 8002 and the public Vercel URL: 30-minute copy, photo absence, 360-1920 px overflow checks, draft editing, unsaved-navigation protection, approval gates, all five practice steps, waveform motion/pause, and saved attempts. No uncaught browser errors. The isolated API was stopped after testing; no user recordings were changed.
+- Artifacts stay git-ignored under `backend/data/`: `final-verification-results.xml`, `final-native-verification/`, and `final-production-verification/`.
+- Limits: test MP4s are synthetic, not consented expert footage. Faster-whisper is absent from this backend environment, so real 30-minute speech transcription, model quality, and processing performance remain unverified. Vercel is still sample-only, not a hosted upload backend. A Windows connection-reset diagnostic appeared when the browser disconnected from sample media; the range response and browser workflow completed successfully.
+
 ## Known limitations
 
 - Reprocessing a recording creates a **new** draft lesson (previous lessons remain). Intentional for review history; merge later if needed.
