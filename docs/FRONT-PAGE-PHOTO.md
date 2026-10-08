@@ -1,0 +1,7 @@
+# Front-page photograph replacement
+
+2026-10-08: the capture page now uses `frontend/public/images/expert-apprentice.webp` (1280 x 853, about 102 kB). The practice library keeps its previous photograph. Generated with the built-in image generation tool; the scene remains labeled illustrative. Desktop (1440 px) and mobile (390 px) loading/overflow checks and screenshots were refreshed.
+
+Final prompt:
+
+> Use case: photorealistic-natural. Asset: replacement front-page photograph for Takumi, an electronics apprenticeship app. Create a landscape 3:2 documentary photograph: an older Japanese electronics instructor in a light gray work shirt demonstrates precise oscilloscope probe placement to a young adult apprentice in a muted blue shirt. Both people and their attentive faces are visible in three-quarter side view, hands clearly visible over a small low-voltage circuit board. A modern gray digital oscilloscope showing a crisp yellow waveform sits immediately beside their hands. Practical bright electronics teaching lab, cool gray workbench, red and black probe wires, understated real equipment. Natural soft daylight, candid human interaction, tactile detail, realistic proportions, balanced neutral colors. Frame tightly around the two people and instrument so the teaching moment reads in a small landscape crop. Keep faces, hands and instrument in the central safe area. No dramatic dark lighting, no decorative glow, no text overlays, no logos, no watermark. This is an illustrative scene, not an actual expert recording.

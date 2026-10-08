@@ -8,6 +8,8 @@ import type {
   TranscriptSegment,
 } from "../types";
 import ProvenanceBadge from "../components/ProvenanceBadge";
+import { CheckCheck, ChevronDown, Copy, Pencil, Plus, Save, X } from "lucide-react";
+import { isDemoMode } from "../demo/demoShim";
 
 /* ---- quote matching (display hint only; the server is authoritative) ---- */
 function normalizeText(t: string): string {
@@ -57,7 +59,7 @@ function stepEvidenceValid(step: LessonStep, transcript: TranscriptSegment[]): b
   );
 }
 
-export default function ReviewPage({ initialLessonId }: { initialLessonId: string | null }) {
+export default function ReviewPage({ initialLessonId, onDirtyChange }: { initialLessonId: string | null; onDirtyChange: (dirty: boolean) => void }) {
   const [lessons, setLessons] = useState<LessonSummary[]>([]);
   const [lessonId, setLessonId] = useState<string | null>(initialLessonId);
   const [lesson, setLesson] = useState<LessonDetail | null>(null);
@@ -98,8 +100,17 @@ export default function ReviewPage({ initialLessonId }: { initialLessonId: strin
   }, []);
 
   useEffect(() => {
-    void loadLessons();
+    void loadLessons().catch((e) => setError(String(e)));
   }, [loadLessons]);
+
+  useEffect(() => { onDirtyChange(dirty); }, [dirty, onDirtyChange]);
+
+  useEffect(() => {
+    if (!dirty) return;
+    const preventExit = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ""; };
+    window.addEventListener("beforeunload", preventExit);
+    return () => window.removeEventListener("beforeunload", preventExit);
+  }, [dirty]);
 
   useEffect(() => {
     if (lessonId) void loadLesson(lessonId).catch((e) => setError(String(e)));
@@ -249,11 +260,13 @@ export default function ReviewPage({ initialLessonId }: { initialLessonId: strin
 
   return (
     <div className="page">
-      <section className="card">
-        <h2>Expert review</h2>
+      <header className="page-heading"><div><div className="eyebrow"><span className="red-rule" />02 / THE EXPERT'S WORD</div><h1>Make it yours.</h1><p>Check the evidence. Fill the gaps. Put your name behind the lesson.</p></div><span className="heading-note">YOUR JUDGEMENT<br />IS THE FINAL CHECK</span></header>
+      <section className="card review-toolbar" aria-label="Lesson selection">
         <div className="row">
           <select
             className="select"
+            aria-label="Choose lesson"
+            disabled={dirty || busy}
             value={lessonId ?? ""}
             onChange={(e) => {
               setNotice(null);
@@ -271,6 +284,8 @@ export default function ReviewPage({ initialLessonId }: { initialLessonId: strin
           {version && (
             <select
               className="select"
+              aria-label="Lesson version"
+              disabled={dirty || busy}
               value={versionId ?? ""}
               onChange={(e) => {
                 const v = lesson?.versions.find((x) => x.id === e.target.value);
@@ -280,7 +295,7 @@ export default function ReviewPage({ initialLessonId }: { initialLessonId: strin
                   setVersion(detail);
                   setDraft({ title: detail.title, summary: detail.summary, steps: detail.steps, questions: detail.questions, changelog: detail.changelog ?? "" });
                   setDirty(false);
-                });
+                }).catch((e) => setError(String(e)));
               }}
             >
               {lesson?.versions.map((v) => (
@@ -294,8 +309,10 @@ export default function ReviewPage({ initialLessonId }: { initialLessonId: strin
             <ProvenanceBadge provenance={version.provenance} provider={version.provider} model={version.model} cached={version.cached} />
           )}
         </div>
-        {error && <div className="banner error">{error}</div>}
-        {notice && <div className="banner ok">{notice}</div>}
+        {error && <div className="banner error" role="alert">{error}</div>}
+        {notice && <div className="banner ok" role="status">{notice}</div>}
+        {dirty && <div className="banner info" role="status">Unsaved lesson edits. Save the draft before changing versions, editing the transcript, or answering questions.<button className="btn small-btn" disabled={busy} onClick={() => void saveDraft()}><Save size={13} />Save draft</button></div>}
+        {draft && <div className="review-summary"><span><strong>{draft.steps.length}</strong> STEPS</span><span><strong>{transcript.length}</strong> SOURCE SEGMENTS</span><span><strong>{unresolved}</strong> OPEN QUESTIONS</span><span><strong>{version?.status === "approved" ? "APPROVED" : "DRAFT"}</strong> / V{version?.version_number}</span></div>}
         {isApprovedVersion && (
           <div className="banner info">
             This version is <strong>approved</strong> and visible to trainees. Saving edits will create a new draft
@@ -304,30 +321,28 @@ export default function ReviewPage({ initialLessonId }: { initialLessonId: strin
         )}
       </section>
 
-      {!loading && !lesson && <p className="muted">Select a lesson to review.</p>}
+      {!loading && !lesson && <div className="empty-state"><CheckCheck size={28} /><strong>Your expertise is the final check.</strong><span>Select a recording's lesson above to review its draft and source evidence.</span></div>}
       {loading && !lesson && <p className="muted">Loading lesson…</p>}
 
       {lesson && version && draft && (
         <>
           <div className="review-grid">
             {/* ---- transcript + media ---- */}
-            <section className="card">
-              <h3>Transcript</h3>
-              {lesson.recording_id && lesson.recording && (
+            <section className="card transcript-panel">
+              <div className="section-heading"><span className="section-number">A</span><h2>Source transcript</h2></div>
+              {!isDemoMode && lesson.recording_id && lesson.recording && (
                 lesson.recording.media_kind === "video" ? (
                   <video ref={mediaRef as React.RefObject<HTMLVideoElement>} controls className="media" src={api.mediaUrl(lesson.recording_id)} />
                 ) : (
                   <audio ref={mediaRef as React.RefObject<HTMLAudioElement>} controls className="media-full" src={api.mediaUrl(lesson.recording_id)} />
                 )
               )}
-              <p className="muted small">Click a segment to play from that timestamp. Edit text to correct transcription mistakes — evidence quotes stay valid against the original text.</p>
+              {isDemoMode && <p className="muted small" style={{ marginTop: 12 }}>Bundled demonstration transcript. Original recording is available in the local app.</p>}
               <div className="segments">
                 {transcript.map((s) => (
-                  <div key={s.seg} className="segment" onClick={() => seek(s.start)}>
-                    <span className="seg-ts" title={`segment ${s.seg}`}>
-                      {fmtSec(s.start)}–{fmtSec(s.end)}
-                    </span>
-                    <SegmentText segment={s} onSave={(t) => void editSegment(s.seg, t)} />
+                  <div key={s.seg} className="segment">
+                    {isDemoMode ? <span className="segment-seek">{fmtSec(s.start)}<span>{fmtSec(s.end)}</span></span> : <button className="segment-seek" title={`Play segment ${s.seg}`} aria-label={`Play from ${fmtSec(s.start)}`} onClick={() => seek(s.start)}>{fmtSec(s.start)}<span>{fmtSec(s.end)}</span></button>}
+                    <SegmentText segment={s} disabled={dirty || busy} onSave={(t) => void editSegment(s.seg, t)} />
                   </div>
                 ))}
               </div>
@@ -335,9 +350,10 @@ export default function ReviewPage({ initialLessonId }: { initialLessonId: strin
 
             {/* ---- draft editor ---- */}
             <section className="card">
-              <h3>Lesson draft</h3>
-              <label className="field-label">Title</label>
+              <div className="section-heading"><span className="section-number">B</span><h2>Lesson draft</h2></div>
+              <label className="field-label" htmlFor="lesson-title">Title</label>
               <input
+                id="lesson-title"
                 className="input"
                 value={draft.title}
                 onChange={(e) => {
@@ -345,8 +361,9 @@ export default function ReviewPage({ initialLessonId }: { initialLessonId: strin
                   setDirty(true);
                 }}
               />
-              <label className="field-label">Summary</label>
+              <label className="field-label" htmlFor="lesson-summary">Summary</label>
               <textarea
+                id="lesson-summary"
                 className="input"
                 rows={2}
                 value={draft.summary}
@@ -373,7 +390,7 @@ export default function ReviewPage({ initialLessonId }: { initialLessonId: strin
                 answered or explicitly dismissed.
               </p>
               {draft.questions.map((q) => (
-                <QuestionCard key={q.id} q={q} busy={busy} onSubmit={answerQuestion} />
+                <QuestionCard key={q.id} q={q} busy={busy || dirty} onSubmit={answerQuestion} />
               ))}
 
               <div className="approval-bar">
@@ -390,13 +407,13 @@ export default function ReviewPage({ initialLessonId }: { initialLessonId: strin
                 </div>
                 <div className="btn-row">
                   <button className="btn ghost" disabled={busy} onClick={() => void copyLessonAsText()}>
-                    Copy as text
+                    <Copy size={14} />Copy as text
                   </button>
                   <button className="btn" disabled={busy || !dirty} onClick={() => void saveDraft()}>
-                    {busy ? "Working…" : isApprovedVersion ? "Save (creates next draft)" : "Save draft"}
+                    <Save size={14} />{busy ? "Working…" : isApprovedVersion ? "Save next draft" : "Save draft"}
                   </button>
-                  <button className="btn primary" disabled={!canApprove || busy} onClick={() => void approve()}>
-                    Approve version
+                  <button className="btn primary" disabled={!canApprove || busy || isApprovedVersion} onClick={() => void approve()}>
+                    <CheckCheck size={15} />{isApprovedVersion ? "Version approved" : "Approve version"}
                   </button>
                 </div>
               </div>
@@ -407,7 +424,7 @@ export default function ReviewPage({ initialLessonId }: { initialLessonId: strin
             <h3>Practice attempts ({lesson.attempts.length})</h3>
             {lesson.attempts.length === 0 && <p className="muted">No attempts recorded yet.</p>}
             {lesson.attempts.length > 0 && (
-              <table className="table">
+              <div className="table-wrap"><table className="table">
                 <thead>
                   <tr>
                     <th>Trainee</th>
@@ -426,7 +443,7 @@ export default function ReviewPage({ initialLessonId }: { initialLessonId: strin
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </table></div>
             )}
           </section>
         </>
@@ -435,7 +452,7 @@ export default function ReviewPage({ initialLessonId }: { initialLessonId: strin
   );
 }
 
-function SegmentText({ segment, onSave }: { segment: TranscriptSegment; onSave: (text: string) => void }) {
+function SegmentText({ segment, disabled, onSave }: { segment: TranscriptSegment; disabled: boolean; onSave: (text: string) => void }) {
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(segment.edited_text ?? segment.text);
   useEffect(() => setValue(segment.edited_text ?? segment.text), [segment]);
@@ -443,6 +460,8 @@ function SegmentText({ segment, onSave }: { segment: TranscriptSegment; onSave: 
     return (
       <span className="seg-edit">
         <textarea
+          aria-label={`Edit transcript segment ${segment.seg}`}
+          disabled={disabled}
           className="input"
           rows={2}
           value={value}
@@ -452,6 +471,7 @@ function SegmentText({ segment, onSave }: { segment: TranscriptSegment; onSave: 
         <span className="btn-row">
           <button
             className="btn small-btn"
+            disabled={disabled}
             onClick={(e) => {
               e.stopPropagation();
               onSave(value);
@@ -475,10 +495,10 @@ function SegmentText({ segment, onSave }: { segment: TranscriptSegment; onSave: 
     );
   }
   return (
-    <span className="seg-text" onDoubleClick={() => setEditing(true)} title="Double-click to edit">
+    <div className="segment-body"><span className="seg-text">
       {segment.edited_text ?? segment.text}
       {segment.edited_text && <span className="chip edited-chip">edited</span>}
-    </span>
+    </span><button className="btn small-btn ghost segment-edit" disabled={disabled} title="Edit transcript" aria-label={`Edit transcript segment ${segment.seg}`} onClick={() => setEditing(true)}><Pencil size={12} /></button></div>
   );
 }
 
@@ -498,24 +518,28 @@ function StepEditor({
   const [newSeg, setNewSeg] = useState("0");
   const [newQuote, setNewQuote] = useState("");
   return (
-    <div className={`step-card ${invalid ? "step-invalid" : ""}`}>
-      <div className="step-head">
+    <details className={`step-card ${invalid ? "step-invalid" : ""}`} open={index === 0 ? true : undefined}>
+      <summary className="step-head">
+        <span className="section-number">{String(index + 1).padStart(2, "0")}</span>
         <strong>
-          Step {index + 1}: {step.title}
+          {step.title}
         </strong>
-        {step.simulator && <span className="chip sim-chip">sim: {step.simulator.task}</span>}
+        {step.simulator && <span className="chip sim-chip">{step.simulator.task}</span>}
         {invalid && <span className="chip err-chip">evidence invalid</span>}
-      </div>
+        <ChevronDown size={15} />
+      </summary>
+      <div className="step-fields">
       <label className="field-label">Instructions</label>
-      <textarea className="input" rows={2} value={step.instructions} onChange={(e) => onChange({ instructions: e.target.value })} />
+      <textarea className="input" aria-label={`Step ${index + 1} instructions`} rows={2} value={step.instructions} onChange={(e) => onChange({ instructions: e.target.value })} />
       <label className="field-label">Rationale (expert's why)</label>
-      <textarea className="input" rows={2} value={step.rationale} onChange={(e) => onChange({ rationale: e.target.value })} />
+      <textarea className="input" aria-label={`Step ${index + 1} rationale`} rows={2} value={step.rationale} onChange={(e) => onChange({ rationale: e.target.value })} />
       <div className="two-col">
         <div>
           <label className="field-label">Success cues (one per line)</label>
           <textarea
             className="input"
             rows={3}
+            aria-label={`Step ${index + 1} success cues`}
             value={step.success_cues.join("\n")}
             onChange={(e) => onChange({ success_cues: e.target.value.split("\n").filter((x) => x.trim()) })}
           />
@@ -525,13 +549,14 @@ function StepEditor({
           <textarea
             className="input"
             rows={3}
+            aria-label={`Step ${index + 1} common mistakes`}
             value={step.common_mistakes.join("\n")}
             onChange={(e) => onChange({ common_mistakes: e.target.value.split("\n").filter((x) => x.trim()) })}
           />
         </div>
       </div>
       <label className="field-label">Recovery guidance</label>
-      <textarea className="input" rows={2} value={step.recovery} onChange={(e) => onChange({ recovery: e.target.value })} />
+      <textarea className="input" aria-label={`Step ${index + 1} recovery guidance`} rows={2} value={step.recovery} onChange={(e) => onChange({ recovery: e.target.value })} />
 
       <div className="evidence-box">
         <label className="field-label">Evidence references</label>
@@ -548,13 +573,13 @@ function StepEditor({
                 title="remove evidence"
                 onClick={() => onChange({ evidence: step.evidence.filter((_, k) => k !== j) })}
               >
-                ×
+                <X size={13} />
               </button>
             </div>
           );
         })}
         <div className="evidence-add">
-          <select className="select small-select" value={newSeg} onChange={(e) => setNewSeg(e.target.value)}>
+          <select className="select small-select" aria-label={`Step ${index + 1} evidence segment`} value={newSeg} onChange={(e) => setNewSeg(e.target.value)}>
             {transcript.map((t) => (
               <option key={t.seg} value={t.seg}>
                 seg {t.seg} ({fmtSec(t.start)})
@@ -564,6 +589,7 @@ function StepEditor({
           <input
             className="input"
             placeholder="Verbatim quote from that segment"
+            aria-label={`Step ${index + 1} evidence quote`}
             value={newQuote}
             onChange={(e) => setNewQuote(e.target.value)}
           />
@@ -575,11 +601,12 @@ function StepEditor({
               setNewQuote("");
             }}
           >
-            Add evidence
+            <Plus size={13} />Add evidence
           </button>
         </div>
       </div>
-    </div>
+      </div>
+    </details>
   );
 }
 
@@ -603,7 +630,7 @@ function QuestionCard({
       {q.why_missing && <div className="muted small">why flagged: {q.why_missing}</div>}
       {q.status === "open" ? (
         <>
-          <textarea className="input" rows={2} placeholder="Ask the expert and record the answer here…" value={answer} onChange={(e) => setAnswer(e.target.value)} />
+          <textarea className="input" rows={2} aria-label={q.question} placeholder="Ask the expert and record the answer here…" value={answer} onChange={(e) => setAnswer(e.target.value)} />
           <div className="btn-row">
             <button className="btn small-btn" disabled={busy || !answer.trim()} onClick={() => onSubmit(q.id, { answer, dismiss: false })}>
               Save answer

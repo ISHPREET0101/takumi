@@ -11,3 +11,6 @@ __pycache__/
 # Node
 node_modules/
 dist/
+
+# Local preview and verification logs
+*.log

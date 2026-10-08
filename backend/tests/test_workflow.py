@@ -27,18 +27,23 @@ FIXTURE = json.loads((BACKEND_DIR / "fixtures" / "sample_oscilloscope_demo.json"
 def client(tmp_path, monkeypatch):
     """Isolated app per test: temp data dir, seeded sample, no real whisper calls."""
     monkeypatch.setenv("TAKUMI_DATA_DIR", str(tmp_path / "data"))
-    monkeypatch.setenv("TAKUMI_EXTRACTION_PROVIDER", "saved_demo")
+    monkeypatch.setenv("TAKUMI_NVIDIA_ENABLED", "false")
+    monkeypatch.setenv("TAKUMI_NVIDIA_API_KEY", "")
     monkeypatch.setenv("TAKUMI_EXTRACTION_PROVIDER", "saved_demo")
     from app import config as config_mod
 
-    config_mod.DATA_DIR = tmp_path / "data"
-    config_mod.RECORDINGS_DIR = tmp_path / "data" / "recordings"
-    config_mod.DB_PATH = tmp_path / "data" / "takumi.db"
+    monkeypatch.setattr(config_mod, "DATA_DIR", tmp_path / "data")
+    monkeypatch.setattr(config_mod, "RECORDINGS_DIR", tmp_path / "data" / "recordings")
+    monkeypatch.setattr(config_mod, "DB_PATH", tmp_path / "data" / "takumi.db")
+    monkeypatch.setattr(config_mod, "EXTRACTION_PROVIDER", "saved_demo")
+    monkeypatch.setattr(config_mod, "NVIDIA_ENABLED", False)
+    monkeypatch.setattr(config_mod, "NVIDIA_API_KEY", "")
 
     from app.services import transcription as tr_mod
 
     monkeypatch.setattr(tr_mod, "transcribe", lambda path, on_progress=None: (_segments_from_fixture(), 214.0))
     monkeypatch.setattr(tr_mod, "media_duration", lambda path: 214.0)
+    monkeypatch.setattr(tr_mod, "whisper_available", lambda: True)
 
     import app.jobs as jobs_mod  # noqa: F401  (import to ensure module wiring)
 

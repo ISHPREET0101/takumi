@@ -1,7 +1,7 @@
 # 匠 Takumi — Expert Knowledge Capture & Guided Apprenticeship
 
 <p align="center">
-  <img src="docs/screenshots/practice-trigger-lock.png" alt="Takumi practice view — locking a trigger on the oscilloscope simulator" width="820" />
+  <img src="docs/screenshots/refined/practice-1440.png" alt="Takumi workshop interface with guided oscilloscope practice" width="820" />
 </p>
 
 <p align="center">
@@ -122,7 +122,9 @@ takumi/
 
 | Review page | Practice page |
 |---|---|
-| ![Review](docs/screenshots/review-editor.png) | ![Capture](docs/screenshots/capture.png) |
+| ![Review](docs/screenshots/refined/review-1440.png) | ![Capture](docs/screenshots/refined/capture-1440.png) |
+
+The workshop UI, responsive checks, and local verification results are documented in [UI refinement](docs/UI-REFINEMENT.md).
 
 ---
 

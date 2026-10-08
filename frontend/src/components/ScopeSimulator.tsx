@@ -48,6 +48,8 @@ export default function ScopeSimulator({ settings, width = 760, height = 420 }: 
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     let raf = 0;
+    let lastTime = 0;
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 
     const isStable = (s: ScopeSettings): boolean => {
       if (!s.trigEnabled) return false;
@@ -56,17 +58,20 @@ export default function ScopeSimulator({ settings, width = 760, height = 420 }: 
       return true;
     };
 
-    const draw = () => {
-      const dpr = window.devicePixelRatio || 1;
-      if (canvas.width !== width * dpr) {
-        canvas.width = width * dpr;
-        canvas.height = height * dpr;
+    const draw = (time: number) => {
+      if (document.hidden) return;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2) * Math.min(1, canvas.clientWidth / width);
+      const pixelWidth = Math.round(width * dpr);
+      const pixelHeight = Math.round(height * dpr);
+      if (canvas.width !== pixelWidth || canvas.height !== pixelHeight) {
+        canvas.width = pixelWidth;
+        canvas.height = pixelHeight;
       }
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       const s = settingsRef.current;
 
       // background
-      ctx.fillStyle = "#0b1512";
+      ctx.fillStyle = "#151d19";
       ctx.fillRect(0, 0, width, height);
 
       const divW = width / 10;
@@ -75,7 +80,7 @@ export default function ScopeSimulator({ settings, width = 760, height = 420 }: 
       const cy = height / 2;
 
       // graticule
-      ctx.strokeStyle = "#1d3a30";
+      ctx.strokeStyle = "#2c3930";
       ctx.lineWidth = 1;
       ctx.beginPath();
       for (let i = 0; i <= 10; i++) {
@@ -88,7 +93,7 @@ export default function ScopeSimulator({ settings, width = 760, height = 420 }: 
       }
       ctx.stroke();
       // center crosshair
-      ctx.strokeStyle = "#2c5949";
+      ctx.strokeStyle = "#4b5e50";
       ctx.beginPath();
       for (let i = 0; i <= 10; i += 1) {
         for (let tick = -2; tick <= 2; tick++) {
@@ -107,10 +112,12 @@ export default function ScopeSimulator({ settings, width = 760, height = 420 }: 
       ctx.stroke();
 
       const stable = isStable(s);
-      if (s.running && !stable) {
-        driftRef.current += divW * 0.9;
+      if (s.running && !stable && !reducedMotion.matches) {
+        const elapsed = lastTime ? Math.min(time - lastTime, 50) : 16.67;
+        driftRef.current += divW * 0.9 * elapsed / 16.67;
         if (driftRef.current > 1e9) driftRef.current = 0;
       }
+      lastTime = time;
       const windowT = 10 * s.sdiv;
 
       // time origin: locked to a rising-edge crossing near 15% of the window
@@ -124,10 +131,10 @@ export default function ScopeSimulator({ settings, width = 760, height = 420 }: 
       }
 
       // waveform
-      ctx.strokeStyle = "#4ade80";
+      ctx.strokeStyle = "#edcd69";
       ctx.lineWidth = 2;
-      ctx.shadowColor = "#4ade8055";
-      ctx.shadowBlur = 6;
+      ctx.shadowColor = "#edcd6933";
+      ctx.shadowBlur = 3;
       ctx.beginPath();
       const N = 700;
       for (let i = 0; i <= N; i++) {
@@ -175,12 +182,18 @@ export default function ScopeSimulator({ settings, width = 760, height = 420 }: 
         ctx.fillText("FREE-RUN — DRIFTING", width - 168, 18);
       }
 
-      raf = requestAnimationFrame(draw);
+      if (s.running && !stable && !reducedMotion.matches) raf = requestAnimationFrame(draw);
     };
 
-    raf = requestAnimationFrame(draw);
-    return () => cancelAnimationFrame(raf);
-  }, [width, height]);
+    const restart = () => { cancelAnimationFrame(raf); lastTime = 0; if (!document.hidden) raf = requestAnimationFrame(draw); };
+    const resize = new ResizeObserver(restart);
+    resize.observe(canvas);
+    document.addEventListener("visibilitychange", restart);
+    reducedMotion.addEventListener("change", restart);
+    restart();
+    return () => { cancelAnimationFrame(raf); resize.disconnect(); document.removeEventListener("visibilitychange", restart); reducedMotion.removeEventListener("change", restart); };
+  }, [width, height, settings]);
 
-  return <canvas ref={canvasRef} style={{ width, height, borderRadius: 10, display: "block" }} />;
+  const locked = settings.trigEnabled && settings.trigLevel > -PEAK_V && settings.trigLevel < PEAK_V;
+  return <canvas ref={canvasRef} className="scope-display" role="img" aria-label={`Oscilloscope: ${!settings.running ? "stopped" : locked ? "trigger locked" : "free-running"}; ${formatVdiv(settings.vdiv)}, ${formatSdiv(settings.sdiv)}, trigger ${settings.trigLevel.toFixed(2)} volts`} />;
 }

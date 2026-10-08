@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { api } from "../api";
 import type { AttemptRecord, AttemptResult, LessonStep, ScopeSettings, TraineeLesson, TraineeLessonCard } from "../types";
 import ProvenanceBadge from "../components/ProvenanceBadge";
+import { ArrowLeft, ArrowRight, BookOpen, Check, CheckCheck, Lightbulb, LoaderCircle, RotateCcw } from "lucide-react";
 import ScopeSimulator, { DEFAULT_SETTINGS, PEAK_V, SDIV_STEPS, VDIV_STEPS, formatSdiv, formatVdiv } from "../components/ScopeSimulator";
 
 interface StepResult extends Record<string, unknown> {
@@ -28,6 +29,11 @@ function initialSettingsFor(step: LessonStep): ScopeSettings {
     edge: init.edge ?? DEFAULT_SETTINGS.edge,
     running: true,
   };
+}
+
+function initialFeedbackFor(step: LessonStep): Feedback | null {
+  if (step.simulator?.task === "recovery") return { kind: "info", lines: ["A disturbance hit the scope: the trigger dropped out and the trace is drifting.", step.simulator.note ?? ""].filter(Boolean) };
+  return step.simulator?.note ? { kind: "info", lines: [step.simulator.note] } : null;
 }
 
 function checkStep(step: LessonStep, s: ScopeSettings): boolean {
@@ -59,50 +65,54 @@ export default function PracticePage() {
   const [active, setActive] = useState<TraineeLesson | null>(null);
   const [traineeName, setTraineeName] = useState(() => localStorage.getItem("takumi_trainee") ?? "");
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [opening, setOpening] = useState<string | null>(null);
 
   useEffect(() => {
     void api
       .traineeLessons()
       .then(setLessons)
-      .catch((e) => setError(String(e)));
+      .catch((e) => setError(String(e))).finally(() => setLoading(false));
   }, []);
 
   const openLesson = async (id: string) => {
+    if (opening) return;
+    setOpening(id);
     setError(null);
     try {
       const l = await api.traineeLesson(id);
       setActive(l);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
-    }
+    } finally { setOpening(null); }
   };
 
   if (!active) {
     return (
       <div className="page">
-        <section className="card">
-          <h2>Practice</h2>
-          <p className="muted">
-            Only <strong>expert-approved</strong> lessons appear here. Practice assesses simulated decisions; physical
-            competence still requires bench observation.
-          </p>
-          {error && <div className="banner error">{error}</div>}
+        <header className="page-heading"><div><div className="eyebrow"><span className="red-rule" />03 / AT THE BENCH</div><h1>Learn by doing.</h1><p>Expert-approved lessons. Real reasoning. Room to get it wrong.</p></div><span className="heading-note">PRACTICE THE DECISION<br />THEN TAKE IT TO THE BENCH</span></header>
+        <section className="library-section">
+          <div className="section-heading"><span className="section-number">01</span><h2>On the workbench</h2><span className="count">{lessons.length.toString().padStart(2, "0")}</span></div>
+          {error && <div className="banner error" role="alert">{error}</div>}
+          {loading && <div className="empty-state" role="status"><LoaderCircle className="spin" size={24} />Loading lessons...</div>}
           <div className="lesson-cards">
-            {lessons.length === 0 && <p className="muted">No approved lessons yet — ask the expert to approve one in Review.</p>}
+            {!loading && lessons.length === 0 && <div className="empty-state"><BookOpen size={28} /><strong>Good lessons start with a second look.</strong><span>No approved lessons yet. An expert needs to finish review first.</span><a className="btn" href="#/review">Go to expert review<ArrowRight size={15} /></a></div>}
             {lessons.map((l) => (
-              <div key={l.id} className="lesson-card" onClick={() => void openLesson(l.id)}>
+              <button key={l.id} className="lesson-card" disabled={!!opening} onClick={() => void openLesson(l.id)}>
+                <img className="lesson-art" src="/images/workshop.webp" alt="Illustrative oscilloscope workbench" width="768" height="512" loading="lazy" />
+                <span className="lesson-card-body"><span className="eyebrow"><CheckCheck size={13} />EXPERT APPROVED / V{l.version_number}</span>
                 <strong>{l.title}</strong>
-                <div className="muted small">{l.summary}</div>
-                <div className="lesson-card-meta">
+                <span className="muted small">{l.summary}</span>
+                <span className="lesson-card-meta">
                   <span className="muted small">
-                    v{l.version_number} · {l.step_count} steps
+                    {l.step_count} steps
                   </span>
                   <ProvenanceBadge provenance={l.provenance} />
-                </div>
-              </div>
+                </span><span className="lesson-enter" style={{ marginTop: 18 }}>{opening === l.id ? "Opening..." : "Begin practice"}<ArrowRight size={17} /></span></span>
+              </button>
             ))}
           </div>
-        </section>
+        </section><p className="muted small">Simulated decisions are assessed here. Physical competence requires observation at the bench.</p>
       </div>
     );
   }
@@ -125,31 +135,19 @@ function LessonRunner({
   const [settings, setSettings] = useState<ScopeSettings>(() => initialSettingsFor(lesson.steps[0]));
   const [wrong, setWrong] = useState(0);
   const [assists, setAssists] = useState(0);
-  const [feedback, setFeedback] = useState<Feedback | null>(null);
+  const [feedback, setFeedback] = useState<Feedback | null>(() => initialFeedbackFor(lesson.steps[0]));
   const [results, setResults] = useState<StepResult[]>([]);
   const [finished, setFinished] = useState(false);
   const [submitted, setSubmitted] = useState<AttemptResult | null>(null);
   const [pastAttempts, setPastAttempts] = useState<AttemptRecord[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const submitLock = useRef(false);
   const stepStartRef = useRef<number>(Date.now());
   const overallStartRef = useRef<number>(Date.now());
 
   const step = lesson.steps[stepIdx];
   const hasSim = !!step?.simulator;
-
-  useEffect(() => {
-    setSettings(initialSettingsFor(step));
-    setWrong(0);
-    setAssists(0);
-    setFeedback(
-      step?.simulator?.task === "recovery"
-        ? { kind: "info", lines: ["A disturbance hit the scope: the trigger dropped out and the trace is drifting.", step.simulator?.note ?? ""].filter(Boolean) }
-        : step?.simulator?.note
-          ? { kind: "info", lines: [step.simulator.note] }
-          : null,
-    );
-    stepStartRef.current = Date.now();
-  }, [step]);
 
   const patch = (p: Partial<ScopeSettings>) => setSettings((s) => ({ ...s, ...p }));
 
@@ -164,6 +162,12 @@ function LessonRunner({
     };
     setResults((prev) => [...prev, rec]);
     if (stepIdx + 1 < lesson.steps.length) {
+      const next = lesson.steps[stepIdx + 1];
+      setSettings(initialSettingsFor(next));
+      setFeedback(initialFeedbackFor(next));
+      setWrong(0);
+      setAssists(0);
+      stepStartRef.current = Date.now();
       setStepIdx(stepIdx + 1);
     } else {
       setFinished(true);
@@ -204,7 +208,10 @@ function LessonRunner({
   };
 
   const submit = async () => {
-    if (!traineeName.trim()) return;
+    if (!traineeName.trim() || submitLock.current) return;
+    submitLock.current = true;
+    setSubmitting(true);
+    setError(null);
     localStorage.setItem("takumi_trainee", traineeName.trim());
     try {
       const res = await api.submitAttempt(lesson.id, {
@@ -216,7 +223,7 @@ function LessonRunner({
       setPastAttempts(await api.myAttempts(lesson.id));
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
-    }
+    } finally { submitLock.current = false; setSubmitting(false); }
   };
 
   const clientScore = Math.max(
@@ -233,11 +240,12 @@ function LessonRunner({
   if (finished) {
     return (
       <div className="page">
-        <section className="card">
-          <h2>{lesson.title} — session complete</h2>
+        <header className="page-heading"><div><div className="eyebrow"><span className="red-rule" />PRACTICE / SESSION COMPLETE</div><h1>A little more know-how.</h1><p>{lesson.title}</p></div><CheckCheck size={34} color="var(--green)" /></header>
+        <section className="result-section">
           <ProvenanceBadge provenance={lesson.provenance} />
+          {error && <div className="banner error" role="alert">{error}</div>}
           <p className="big-score">{clientScore}<span className="score-denom">/100</span></p>
-          <table className="table">
+          <div className="table-wrap"><table className="table">
             <thead>
               <tr>
                 <th>Step</th>
@@ -258,18 +266,19 @@ function LessonRunner({
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
           {!submitted ? (
             <div className="row">
               <input
                 className="input"
                 style={{ maxWidth: 280 }}
                 placeholder="Your name"
+                aria-label="Trainee name"
                 value={traineeName}
                 onChange={(e) => setTraineeName(e.target.value)}
               />
-              <button className="btn primary" disabled={!traineeName.trim()} onClick={() => void submit()}>
-                Submit attempt
+              <button className="btn primary" disabled={!traineeName.trim() || submitting} onClick={() => void submit()}>
+                {submitting ? <LoaderCircle size={15} className="spin" /> : <CheckCheck size={15} />}{submitting ? "Saving..." : "Save attempt"}
               </button>
             </div>
           ) : (
@@ -281,7 +290,7 @@ function LessonRunner({
               {pastAttempts.length > 0 && (
                 <>
                   <h3>All attempts on this lesson ({pastAttempts.length})</h3>
-                  <table className="table">
+                  <div className="table-wrap"><table className="table">
                     <thead>
                       <tr>
                         <th>Trainee</th>
@@ -300,14 +309,14 @@ function LessonRunner({
                         </tr>
                       ))}
                     </tbody>
-                  </table>
+                  </table></div>
                 </>
               )}
             </>
           )}
           <div className="btn-row" style={{ marginTop: 12 }}>
             <button className="btn" onClick={onExit}>
-              Back to lessons
+              <ArrowLeft size={15} />Back to lessons
             </button>
           </div>
         </section>
@@ -317,10 +326,10 @@ function LessonRunner({
 
   return (
     <div className="page">
-      <section className="card">
+      <section className="practice-header">
         <div className="row spread">
           <div>
-            <h2 style={{ marginBottom: 4 }}>{lesson.title}</h2>
+            <div className="eyebrow"><span className="red-rule" />03 / GUIDED PRACTICE</div><h1 style={{ marginBottom: 8, fontFamily: "Georgia, serif", fontWeight: 400 }}>{lesson.title}</h1>
             <span className="muted small">
               v{lesson.version_number} · step {stepIdx + 1} of {lesson.steps.length}
             </span>
@@ -328,16 +337,16 @@ function LessonRunner({
           <div className="btn-row">
             <ProvenanceBadge provenance={lesson.provenance} />
             <button className="btn ghost" onClick={onExit}>
-              Exit
+              <ArrowLeft size={14} />All lessons
             </button>
           </div>
         </div>
-        <div className="step-rail">
+        <div className="step-rail" style={{ "--step-count": lesson.steps.length } as React.CSSProperties} aria-label="Lesson progress">
           {lesson.steps.map((s, i) => {
             const done = results.find((r) => r.step_id === s.id);
             return (
-              <div key={s.id} className={`rail-dot ${i === stepIdx ? "current" : ""} ${done ? (done.passed ? "ok" : "bad") : ""}`}>
-                {i + 1}
+              <div key={s.id} className={`rail-step ${i === stepIdx ? "current" : ""} ${done ? (done.passed ? "ok" : "bad") : ""}`} aria-current={i === stepIdx ? "step" : undefined}>
+                <span className="rail-dot">{done?.passed ? <Check size={12} /> : String(i + 1).padStart(2, "0")}</span><span className="rail-title">{s.title}</span>
               </div>
             );
           })}
@@ -347,21 +356,15 @@ function LessonRunner({
 
       <div className="practice-grid">
         <section className="card">
-          <h3>
-            Step {stepIdx + 1}: {step.title}
-          </h3>
+          <div className="eyebrow">THE TASK / STEP {String(stepIdx + 1).padStart(2, "0")}</div><h2>{step.title}</h2>
           <p className="instructions">{step.instructions}</p>
-          {step.rationale && (
-            <p className="muted small">
-              <strong>Why:</strong> {step.rationale}
-            </p>
-          )}
           <div className="scope-wrap">
+            <div className="instrument-heading"><span>TAKUMI / DIGITAL OSCILLOSCOPE</span><span>CH 1 · 1 kHz · 2 Vpp</span></div>
             <ScopeSimulator settings={settings} />
             <div className="scope-controls">
               <div className="ctrl-group">
                 <span className="ctrl-label">VOLTS/DIV</span>
-                <select className="select" value={settings.vdiv} onChange={(e) => patch({ vdiv: parseFloat(e.target.value) })}>
+                <select className="select" aria-label="Volts per division" value={settings.vdiv} onChange={(e) => patch({ vdiv: parseFloat(e.target.value) })}>
                   {VDIV_STEPS.map((v) => (
                     <option key={v} value={v}>
                       {formatVdiv(v)}
@@ -371,7 +374,7 @@ function LessonRunner({
               </div>
               <div className="ctrl-group">
                 <span className="ctrl-label">TIME/DIV</span>
-                <select className="select" value={settings.sdiv} onChange={(e) => patch({ sdiv: parseFloat(e.target.value) })}>
+                <select className="select" aria-label="Time per division" value={settings.sdiv} onChange={(e) => patch({ sdiv: parseFloat(e.target.value) })}>
                   {SDIV_STEPS.map((v) => (
                     <option key={v} value={v}>
                       {formatSdiv(v)}
@@ -385,12 +388,13 @@ function LessonRunner({
                   <input type="checkbox" checked={settings.trigEnabled} onChange={(e) => patch({ trigEnabled: e.target.checked })} />
                   enabled
                 </label>
-                <select className="select" value={settings.edge} onChange={(e) => patch({ edge: e.target.value as "rise" | "fall" })}>
+                <select className="select" aria-label="Trigger edge" value={settings.edge} onChange={(e) => patch({ edge: e.target.value as "rise" | "fall" })}>
                   <option value="rise">rising edge</option>
                   <option value="fall">falling edge</option>
                 </select>
                 <input
                   type="range"
+                  aria-label="Trigger level"
                   min={-1}
                   max={1}
                   step={0.05}
@@ -411,36 +415,36 @@ function LessonRunner({
         </section>
 
         <section className="card">
-          <h3>Expert guidance</h3>
+          <div className="eyebrow">FROM THE EXPERT</div><h2 className="guidance-heading"><BookOpen size={19} />The reasoning behind it.</h2>
+          {step.rationale && <blockquote className="expert-quote">{step.rationale}<small>EXPERT'S RATIONALE / APPROVED V{lesson.version_number}</small></blockquote>}
           {feedback ? (
-            <div className={`feedback fb-${feedback.kind}`}>
+            <div className={`feedback fb-${feedback.kind}`} role="status" aria-live="polite">
               {feedback.lines.map((l, i) => (
                 <p key={i}>{l}</p>
               ))}
             </div>
           ) : (
-            <p className="muted">Adjust the simulated scope to follow this step, then press <strong>Check this step</strong>. Feedback quotes the expert's own rationale, mistakes and recovery moves.</p>
+            <p className="muted small">{step.success_cues[0] ?? "Follow the expert's instructions for this step."}</p>
           )}
           {hasSim && step.simulator?.task !== "free" && (
             <div className="btn-row">
               <button className="btn primary" onClick={check}>
-                Check this step
+                <Check size={15} />Check this step
               </button>
               <button className="btn ghost" onClick={askHint}>
-                Ask the expert (hint)
+                <Lightbulb size={15} />Expert hint
               </button>
             </div>
           )}
           {(!hasSim || step.simulator?.task === "free") && (
             <div className="btn-row">
               <button className="btn primary" onClick={() => finishStep(true)}>
-                Continue
+                Continue<ArrowRight size={15} />
               </button>
             </div>
           )}
-          <div className="muted small" style={{ marginTop: 10 }}>
-            This step: {wrong} wrong adjustment(s) · {assists} hint(s) used
-          </div>
+          <div className="session-stats"><span><strong>{wrong.toString().padStart(2, "0")}</strong>Wrong adjustments</span><span><strong>{assists.toString().padStart(2, "0")}</strong>Hints used</span></div>
+          <button className="btn ghost small-btn" style={{ marginTop: 18 }} onClick={() => setSettings(initialSettingsFor(step))}><RotateCcw size={13} />Reset instrument</button>
         </section>
       </div>
     </div>
