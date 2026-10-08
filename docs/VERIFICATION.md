@@ -91,6 +91,12 @@ The pending "NVIDIA NIM live" item is now **done**, using the model chosen on bu
 | Simulator scoring vs expert-approved correct/incorrect/recovery scenarios | ✅ partially automated (server-side scoring integrity) + browser walkthrough of all three scenario types | — |
 | API throttling / exhausted free access behaviour | ✅ covered by bounded-retry + loud-failure tests (mocked); live 429 path to re-check once NVIDIA key is confirmed | — |
 
+## Recording limit raised to 30 minutes (2026-10-08)
+
+- Current default: `TAKUMI_MAX_RECORDING_SECONDS=1800` (30 minutes); the upload size cap remains 1000 MB. Updated backend defaults, environment example, capture text, README, and deck source. Previously generated deck files retain their historical limits until regenerated.
+- Regression coverage uploads an MP4 with stubbed metadata/transcription at exactly 1800 seconds and rejects 1801 seconds. Both the early probe and transcription-duration fallback paths are covered. These tests verify validation, not real 30-minute video decoding or model processing performance.
+- Existing installations with an explicit duration override should set it to `1800` and restart the backend. Vercel remains the sample-only frontend; actual uploads require the local backend and transcription dependencies.
+
 ## Known limitations
 
 - Reprocessing a recording creates a **new** draft lesson (previous lessons remain). Intentional for review history; merge later if needed.

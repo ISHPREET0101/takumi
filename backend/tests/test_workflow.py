@@ -415,21 +415,49 @@ def test_media_range_request_supported(client):
     assert len(r.content) == 1024
 
 
-def test_oversized_recording_fails_fast_before_transcription(client, monkeypatch):
-    """A >10 min recording must be rejected in the probe stage, without loading whisper."""
+@pytest.mark.parametrize("probed_duration", [1800.0, None])
+def test_thirty_minute_video_is_accepted(client, monkeypatch, probed_duration):
+    """Accept the boundary with probed metadata or the transcription fallback."""
+    from app.services import transcription as tr_mod
+    from app.services import extraction as ex_mod
+
+    monkeypatch.setattr("app.config.EXTRACTION_PROVIDER", "ollama")
+    monkeypatch.setattr(ex_mod, "ollama_reachable", lambda timeout=1.0, force=False: True)
+    monkeypatch.setattr(ex_mod, "extract_with_ollama", lambda segments: json.loads(json.dumps(FIXTURE["extraction"])))
+    monkeypatch.setattr(tr_mod, "media_duration_fast", lambda path: probed_duration)
+    monkeypatch.setattr(tr_mod, "transcribe", lambda path, on_progress=None: (_segments_from_fixture(), 1800.0))
+
+    response = client.post(
+        "/api/recordings",
+        files={"file": ("thirty-minute.mp4", b"mock video; decoding is stubbed", "video/mp4")},
+    )
+    assert response.status_code == 200, response.text
+    rec, job = _wait_job(client, response.json()["id"], expect="succeeded")
+    assert rec["media_kind"] == "video"
+    assert rec["duration_sec"] == 1800.0
+    assert job["lesson_id"]
+
+
+@pytest.mark.parametrize("probe_available", [True, False])
+def test_over_thirty_minutes_is_rejected(client, monkeypatch, probe_available):
+    """Reject above the boundary early, or after transcription if no probe exists."""
     from app.services import transcription as tr_mod
 
-    monkeypatch.setattr(tr_mod, "media_duration", lambda path: 700.0)
+    monkeypatch.setattr(tr_mod, "media_duration_fast", lambda path: 1801.0 if probe_available else None)
+    calls = []
 
-    def _must_not_run(path, on_progress=None):
-        raise AssertionError("transcription started despite oversized duration")
+    def transcribe(path, on_progress=None):
+        assert not probe_available, "transcription started despite oversized probed duration"
+        calls.append(path)
+        return _segments_from_fixture(), 1801.0
 
-    monkeypatch.setattr(tr_mod, "transcribe", _must_not_run)
+    monkeypatch.setattr(tr_mod, "transcribe", transcribe)
 
     rec = _upload_wav(client)
     rec, job = _wait_job(client, rec["id"], expect="failed")
-    assert "700s" in job["error"]
-    assert "limit is 600s" in job["error"]
+    assert "1801s" in job["error"]
+    assert "limit is 1800s" in job["error"]
+    assert len(calls) == (0 if probe_available else 1)
 
 
 def test_health_ollama_probe_is_cached(client, monkeypatch):

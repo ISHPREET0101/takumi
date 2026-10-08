@@ -68,7 +68,7 @@ export default function CapturePage({ onOpenReview }: { onOpenReview: (lessonId:
       <section className="capture-intro" aria-label="New recording">
         <div className="capture-upload">
           <div className="section-heading"><span className="section-number">01</span><h2>Capture a demonstration</h2></div>
-          <p className="muted">An expert, a task, and the reasoning behind it.<br /> English audio or video, up to 10 minutes.</p>
+          <p className="muted">An expert, a task, and the reasoning behind it.<br /> English audio or video, up to 30 minutes.</p>
           <button type="button" className={`dropzone ${dragOver ? "drag" : ""}`} disabled={uploading || isDemoMode}
             onDragOver={(e) => { e.preventDefault(); if (!uploading && !isDemoMode) setDragOver(true); }}
             onDragLeave={() => setDragOver(false)}

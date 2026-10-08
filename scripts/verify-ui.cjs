@@ -27,6 +27,7 @@ const base = process.env.BASE_URL || 'http://127.0.0.1:5173';
     await page.goto(base);
     await page.getByRole('button', { name: 'Review lesson' }).waitFor();
     assert.equal(await page.locator('.capture-page img').count(), 0, 'Capture page must not display a photograph');
+    assert.match(await page.locator('.capture-upload').innerText(), /up to 30 minutes/, 'Capture must advertise the 30-minute limit');
     checks.push('Capture page: photograph absent');
     for (const width of [360, 390, 768, 1280, 1440, 1920]) {
       await page.setViewportSize({ width, height: 1000 });

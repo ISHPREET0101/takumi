@@ -39,7 +39,7 @@ OLLAMA_MODEL = os.getenv("TAKUMI_OLLAMA_MODEL", "qwen2.5:7b")
 WHISPER_MODEL = os.getenv("TAKUMI_WHISPER_MODEL", "small.en")
 
 # --- Limits ----------------------------------------------------------------
-MAX_RECORDING_SECONDS = float(os.getenv("TAKUMI_MAX_RECORDING_SECONDS", "600"))
+MAX_RECORDING_SECONDS = float(os.getenv("TAKUMI_MAX_RECORDING_SECONDS", "1800"))
 MAX_UPLOAD_MB = int(os.getenv("TAKUMI_MAX_UPLOAD_MB", "1000"))
 LLM_TIMEOUT_SECONDS = float(os.getenv("TAKUMI_LLM_TIMEOUT_SECONDS", "60"))
 LLM_MAX_ATTEMPTS = int(os.getenv("TAKUMI_LLM_MAX_ATTEMPTS", "2"))
