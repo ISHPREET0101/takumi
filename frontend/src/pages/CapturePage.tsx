@@ -66,7 +66,6 @@ export default function CapturePage({ onOpenReview }: { onOpenReview: (lessonId:
     <div className="page capture-page">
       <header className="page-heading"><div><div className="eyebrow"><span className="red-rule" />01 / THE SOURCE</div><h1>Keep the know-how.</h1><p>The small decisions. The practiced hand. Start with a recording.</p></div><span className="heading-note">FROM ONE EXPERT<br />TO THE NEXT GENERATION</span></header>
       <section className="capture-intro" aria-label="New recording">
-        <figure className="workshop-photo"><img src="/images/expert-apprentice.webp" width="1536" height="1024" alt="Illustrative scene of an electronics instructor teaching an apprentice probe placement beside an oscilloscope" fetchPriority="high" /><figcaption><span>FIELD NOTES / ELECTRONICS</span><span>Illustrative workshop image</span></figcaption></figure>
         <div className="capture-upload">
           <div className="section-heading"><span className="section-number">01</span><h2>Capture a demonstration</h2></div>
           <p className="muted">An expert, a task, and the reasoning behind it.<br /> English audio or video, up to 10 minutes.</p>

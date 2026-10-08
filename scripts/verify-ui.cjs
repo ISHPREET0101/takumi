@@ -26,7 +26,8 @@ const base = process.env.BASE_URL || 'http://127.0.0.1:5173';
   try {
     await page.goto(base);
     await page.getByRole('button', { name: 'Review lesson' }).waitFor();
-    await page.locator('.workshop-photo img').evaluate(async (img) => { await img.decode(); });
+    assert.equal(await page.locator('.capture-page img').count(), 0, 'Capture page must not display a photograph');
+    checks.push('Capture page: photograph absent');
     for (const width of [360, 390, 768, 1280, 1440, 1920]) {
       await page.setViewportSize({ width, height: 1000 });
       await fits(`Capture ${width}`);

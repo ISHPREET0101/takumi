@@ -5,7 +5,7 @@ Implemented locally on 2026-10-08. Source of truth: [DESIGN.md](../DESIGN.md).
 ## What changed
 
 - Replaced the dark green panel layout with a light electronics-workshop identity: vermilion seal, serif headings, ruled sections, numbered navigation, and restrained instrument styling.
-- Capture now pairs an illustrative workshop photograph with a keyboard-accessible upload surface and a recording register. Uploads reject unsupported extensions and oversized files before sending; duplicate uploads are guarded.
+- Capture uses a full-width keyboard-accessible upload surface and a recording register, without a photograph. Uploads reject unsupported extensions and oversized files before sending; duplicate uploads are guarded.
 - Review keeps the source transcript visible on desktop and collapses individual step editors. Transcript editing has an explicit keyboard-accessible control. Unsaved lesson edits block question/transcript operations that would replace them; navigation warns before discarding edits. Approval requirements remain enforced.
 - Practice now includes a lesson library, labeled step progress, responsive oscilloscope, expert rationale, reset control, and a session receipt. Attempt submission has a duplicate-request guard and visible error state. Step transitions initialize instrument settings and feedback in one update.
 - Idle recording requests run every 15 seconds rather than every second. Active jobs refresh every 1.5 seconds; hidden tabs skip polling. Canvas rendering stops when paused, locked, hidden, or reduced motion is requested, and its backing resolution is bounded to the displayed size and 2x device scale.

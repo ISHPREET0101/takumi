@@ -28,7 +28,7 @@ App owns navigation and connection state. Page heading and section-heading patte
 Target WCAG 2.2 AA. Visible focus, skip navigation, named inputs, native buttons and links, keyboard-operable upload and lesson selection. Reduced motion support; text equivalent for instrument state. Error messages and feedback announced with live regions.
 
 ## Responsive behavior
-Desktop navigation rail; compact top navigation below 1000px. Capture and practice columns collapse below 800px. Review transcript sticks on desktop and flows on mobile. Canvas scales to available width with a stable aspect ratio. Form grids collapse below 600px. Tables scroll within their own region.
+Desktop navigation rail; compact top navigation below 1000px. Capture is a full-width upload section without photography; practice columns collapse below 800px. Review transcript sticks on desktop and flows on mobile. Canvas scales to available width with a stable aspect ratio. Form grids collapse below 600px. Tables scroll within their own region.
 
 ## Interaction states
 Explicit initial loading and empty library states. Upload guarded against duplicate requests with format and size validation. Poll active processing quickly, idle recordings every 15 seconds, suspend hidden-tab polling. Retry failed jobs with visible errors. Save and approval show busy/disabled states. Demo capture disabled with honest local-only explanation.
