@@ -525,7 +525,7 @@ For changes, keep the capture -> review -> approval -> practice contract intact,
 
 ## Team and License
 
-Maintained by [ISHPREET0101](https://github.com/ISHPREET0101) and collaborators. Add the final team roster to submission materials separately.
+Maintained by [ISHPREET0101](https://github.com/ISHPREET0101) and [sgoel2be24-cyber](https://github.com/sgoel2be24-cyber). Add the final team roster to submission materials separately.
 
 Built with React, TypeScript, Vite, Lucide, FastAPI, SQLite, faster-whisper, and optional Ollama/NVIDIA integrations.
 
